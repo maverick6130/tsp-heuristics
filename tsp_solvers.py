@@ -2,6 +2,9 @@ import json
 import numpy as np
 from pyomo.environ import *
 
+import numpy as np
+
+
 def one_shot_exact(A):
     N = A.shape[0]
 
@@ -96,3 +99,67 @@ def iterative_exact(A):
         solver.solve(model)
 
     return value(model.objective)
+
+
+
+
+def lk_tsp(dist_matrix):
+    n = len(dist_matrix)
+    # Create a tour using the nearest neighbor heuristic
+    tour = nearest_neighbor(dist_matrix)
+    best_tour = tour
+    best_cost = tour_cost(tour, dist_matrix)
+    improve = True
+    while improve:
+        improve = False
+        for i in range(n - 1):
+            for j in range(i + 1, n):
+                # Get the candidate edges
+                a, b, c, d = candidate_edges(tour, i, j)
+                if c < 0:
+                    continue
+                # Perform the Lin-Kernighan move
+                new_tour = lin_kernighan(tour, a, b, c, d)
+                new_cost = tour_cost(new_tour, dist_matrix)
+                if new_cost < best_cost:
+                    best_tour = new_tour
+                    best_cost = new_cost
+                    improve = True
+        tour = best_tour
+    return best_cost
+
+def nearest_neighbor(dist_matrix):
+    n = len(dist_matrix)
+    unvisited = list(range(1, n))
+    tour = [0]
+    while unvisited:
+        nearest = min(unvisited, key=lambda x: dist_matrix[tour[-1]][x])
+        tour.append(nearest)
+        unvisited.remove(nearest)
+    tour.append(0)
+    return tour
+
+def tour_cost(tour, dist_matrix):
+    cost = 0
+    for i in range(len(tour) - 1):
+        cost += dist_matrix[tour[i]][tour[i+1]]
+    return cost
+
+def candidate_edges(tour, i, j):
+    a, b = tour[i], tour[i+1]
+    c, d = tour[j], tour[(j+1)%len(tour)]
+    e, f = tour[(i-1)%len(tour)], tour[(j+1)%len(tour)]
+    gain = dist_matrix[e][c] + dist_matrix[f][b] - dist_matrix[e][b] - dist_matrix[f][c]
+    return a, c, d, b if gain > 0 else c, d, a, f
+
+def lin_kernighan(tour, a, b, c, d):
+    if b < c:
+        subtour = tour[b:c+1]
+        subtour.reverse()
+        return tour[:b] + subtour + tour[c+1:]
+    else:
+        subtour = tour[d:b+1]
+        subtour.reverse()
+        return tour[:d+1] + subtour + tour[b+1:]
+
+
