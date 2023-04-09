@@ -1,12 +1,13 @@
 from testbed import TestBed
-from tsp_solvers import one_shot_exact, iterative_exact, alternate_matching, Tsp, lk_tsp
+from tsp_solvers import one_shot_exact, iterative_exact, alternate_matching_orig, Tsp, lk_tsp
 import numpy as np
 
 if __name__ == "__main__":
     testbed = TestBed('testcases')
-    # testbed.test(iterative_exact)
-    testbed.test(alternate_matching)
+    
+    testbed.test(alternate_matching_orig)
     # testbed.test(lk_tsp)
+    # testbed.test(iterative_exact)
     # testbed.test(lk_tsp)
     # t = Tsp('./tc5.txt')
     # t.getHeuristicSolution()

@@ -9,7 +9,7 @@ import os
 import json
 import time
 
-MAXSIZE = 700
+MAXSIZE = 1000
 MAXTIME = 500
 class TestBed:
     def __init__(self, tc_folder):

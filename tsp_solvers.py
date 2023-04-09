@@ -9,7 +9,7 @@ TMAX = 300
 class Tsp:
     def __init__(self, A):
         self.base = "greedy"  # "random" or "greedy"
-        self.numHeuristics = 2 # 1 or 2
+        self.numHeuristics = 1 # 1 or 2
         self.sol = []
         self.cost = 0
         self.adj = A.T.tolist()
@@ -273,10 +273,10 @@ class Tsp:
         while True:
             if time.time() - tStart > TMAX:
                 break
-                
-            self.reduceSolution2()
-            if self.numHeuristics == 2:
-                self.reduceSolution()
+            # if self.numHeuristics == 2:
+            self.reduceSolution() 
+            # self.reduceSolution2()
+            
 
             if self.cost < prevCost:
                 prevCost = self.cost
@@ -391,7 +391,7 @@ def iterative_exact(A):
 
     return value(model.objective)
 
-def alternate_matching(A):
+def alternate_matching_orig(A):
     prob = Tsp(A)
     return prob.getSolution("heuristic")
 import json
