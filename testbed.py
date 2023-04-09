@@ -9,6 +9,8 @@ import os
 import json
 import time
 
+MAXSIZE = 700
+MAXTIME = 500
 class TestBed:
     def __init__(self, tc_folder):
         self.max_subprocess = os.cpu_count()
@@ -19,7 +21,7 @@ class TestBed:
         self.problems = list(self.solution.keys())
         self.problem_size = { prob : len(list(tsplib95.load(os.path.join(tc_folder, f'{prob}.tsp')).get_nodes()))
                          for prob in self.problems }
-        self.problems = [ prob for prob in self.problems if self.problem_size[prob] <= 500 ]
+        self.problems = [ prob for prob in self.problems if self.problem_size[prob] <= MAXSIZE ]
         self.adj_mtx = { prob : nx.to_numpy_array(tsplib95.load(os.path.join(tc_folder, f'{prob}.tsp')).get_graph())
                     for prob in tqdm(self.problems, desc='Loading testcases') }
     
@@ -29,7 +31,7 @@ class TestBed:
             raise Exception("TIMEOUT")
         signal.signal(signal.SIGALRM, handler)
         start = time.perf_counter_ns()  
-        signal.alarm(600)
+        signal.alarm(MAXTIME)
         try:
             output = solver(instance)
         except Exception as e:
@@ -81,3 +83,6 @@ class TestBed:
         plt.xlabel('Instance Size')
         plt.ylabel('Time (s)')
         plt.savefig(f'{tsp_solver.__name__}_perf.png')
+
+        with open(f'{tsp_solver.__name__}_optim.json', 'w') as f:
+            json.dump({'sizes' : sizes, 'optim_res' : optim_res, 'perf_res':perf_res}, f)

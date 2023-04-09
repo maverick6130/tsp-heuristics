@@ -5,28 +5,31 @@ from pyomo.environ import *
 from pyomo.environ import *
 import random
 import time
+TMAX = 300
 class Tsp:
     def __init__(self, A):
         self.base = "greedy"  # "random" or "greedy"
         self.numHeuristics = 2 # 1 or 2
-
+        self.sol = []
+        self.cost = 0
         self.adj = A.T.tolist()
-        self.extra = 0
+        self.origN = len(self.adj)
+        self.extra = 6 - len(self.adj) % 6
+        if self.extra == 6:
+            self.extra = 0
         self.extraEdge = 1 + A.max()
         self.n = len(self.adj)
         # print(self.adj)
-        while self.n % 6:
-            self.extra += 1
-            self.adj.append([self.extraEdge for _ in range(self.n)])
-            self.n += 1
-            # print(self.adj)
-            for i in range(self.n - 1):
-                # print(self.adj[i])
-                self.adj[i].append(self.extraEdge)
-            self.adj[-1].append(0)
+        for _ in range(self.extra):
+            self.adj.append([self.extraEdge for _ in range(self.n - 1)])
+            self.adj[-1] += [0 for _ in range(self.extra + 1)]
+        for i in range(self.n - 1):
+            self.adj[i] += [self.extraEdge for _ in range(self.extra)]
+        self.adj[self.n - 1] += [0 for _ in range(self.extra)]
+        self.n += self.extra
 
-        self.sol = []
-        self.cost = 0
+
+        
 
     # def __init__(self, file):
     #     self.base = "greedy"  # "random" or "greedy"
@@ -229,36 +232,35 @@ class Tsp:
             self.cost += self.adj[self.sol[i]][self.sol[i+1]]
         self.cost += self.adj[self.sol[-1]][self.sol[0]]
 
-    def validate(self):
-        x = self.sol
-        x.sort()
-        if x != [t for t in range(self.n)]:
-            print(x)
-            print([t for t in range(self.n)])
-            return False
-        return True
 
     def getActualCost(self):
-        if self.extra == 0:
-            return
-        self.cost -= self.extraEdge
-        origN = self.n - self.extra
-        idx = self.sol.index(origN-1)
-        idx1, idx2 = idx, idx
-        while(self.sol[idx1] >= origN - 1):
-            idx1 -= 1
-            if idx1 < 0:
-                idx1 = self.n - 1
         
-        while(self.sol[idx2] >= origN - 1):
-            idx2 += 1
-            if idx2 == self.n:
-                idx2 = 0
+       
+        sol = [x for x in self.sol if x < self.origN]
+        self.cost = 0
+        for i in range(len(sol)):
+            self.cost += self.adj[sol[i]][sol[(i+1)%len(sol)]]
+        sol.sort()
+        if sol != [x for x in range(self.origN)]:
+            print("ERROR!!!!")
+        # self.cost -= self.extraEdge
+        # origN = self.n - self.extra
+        # idx = self.sol.index(origN-1)
+        # idx1, idx2 = idx, idx
+        # while(self.sol[idx1] >= origN - 1):
+        #     idx1 -= 1
+        #     if idx1 < 0:
+        #         idx1 = self.n - 1
         
-        if((idx1 + 1)% self.n == idx):
-            self.cost += self.adj[self.sol[idx]][self.sol[idx2]]
-        else:
-            self.cost += self.adj[self.sol[idx1]][self.sol[idx]]
+        # while(self.sol[idx2] >= origN - 1):
+        #     idx2 += 1
+        #     if idx2 == self.n:
+        #         idx2 = 0
+        
+        # if((idx1 + 1)% self.n == idx):
+        #     self.cost += self.adj[self.sol[idx]][self.sol[idx2]]
+        # else:
+        #     self.cost += self.adj[self.sol[idx1]][self.sol[idx]]
 
 
 
@@ -267,10 +269,10 @@ class Tsp:
         self.getBaseSolution()
         prevCost = self.cost
         self.reduceSolution()
-        
+        tStart = time.time()
         while True:
-            if not self.validate():
-                print("ERROR")
+            if time.time() - tStart > TMAX:
+                break
                 
             self.reduceSolution2()
             if self.numHeuristics == 2:
@@ -289,8 +291,6 @@ class Tsp:
             self.getBaseSolution()
         else:
             self.getCorrectSolution()
-        if not self.validate():
-            print("ERROR")
         self.getActualCost()
         return self.cost
     
@@ -505,13 +505,16 @@ def lk_tsp(dist_matrix):
     tour = nearest_neighbor(dist_matrix)
     best_tour = tour
     best_cost = tour_cost(tour, dist_matrix)
+    tStart = time.time()
     improve = True
     while improve:
+        if time.time() - tStart > TMAX:
+            break
         improve = False
         for i in range(n - 1):
             for j in range(i + 1, n):
                 # Get the candidate edges
-                a, b, c, d = candidate_edges(tour, i, j)
+                a, b, c, d = candidate_edges(tour, i, j, dist_matrix)
                 if c < 0:
                     continue
                 # Perform the Lin-Kernighan move
@@ -537,16 +540,19 @@ def nearest_neighbor(dist_matrix):
 
 def tour_cost(tour, dist_matrix):
     cost = 0
-    for i in range(len(tour) - 1):
-        cost += dist_matrix[tour[i]][tour[i+1]]
+    for i in range(len(tour)):
+        cost += dist_matrix[tour[i]][tour[(i+1)%len(tour)]]
     return cost
 
-def candidate_edges(tour, i, j):
+def candidate_edges(tour, i, j, dist_matrix):
     a, b = tour[i], tour[i+1]
     c, d = tour[j], tour[(j+1)%len(tour)]
     e, f = tour[(i-1)%len(tour)], tour[(j+1)%len(tour)]
     gain = dist_matrix[e][c] + dist_matrix[f][b] - dist_matrix[e][b] - dist_matrix[f][c]
-    return a, c, d, b if gain > 0 else c, d, a, f
+    if gain > 0:
+        return a,c,d,b 
+    return c,d,a,f
+    # return (a, c, d, b if gain > 0 else c, d, a, f)
 
 def lin_kernighan(tour, a, b, c, d):
     if b < c:
