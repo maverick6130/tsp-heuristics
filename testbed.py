@@ -19,7 +19,7 @@ class TestBed:
         self.problems = list(self.solution.keys())
         self.problem_size = { prob : len(list(tsplib95.load(os.path.join(tc_folder, f'{prob}.tsp')).get_nodes()))
                          for prob in self.problems }
-        self.problems = [ prob for prob in self.problems if self.problem_size[prob] <= 100 ]
+        self.problems = [ prob for prob in self.problems if self.problem_size[prob] <= 500 ]
         self.adj_mtx = { prob : nx.to_numpy_array(tsplib95.load(os.path.join(tc_folder, f'{prob}.tsp')).get_graph())
                     for prob in tqdm(self.problems, desc='Loading testcases') }
     
@@ -28,7 +28,7 @@ class TestBed:
         def handler(signum, frame):
             raise Exception("TIMEOUT")
         signal.signal(signal.SIGALRM, handler)
-        start = time.perf_counter_ns()
+        start = time.perf_counter_ns()  
         signal.alarm(600)
         try:
             output = solver(instance)
